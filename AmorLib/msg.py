@@ -1,4 +1,4 @@
-from typing import List, Union, Literal, Annotated
+from typing import Union, Literal, Annotated
 from pydantic import BaseModel, ValidationError, Field, Tag
 
 # region 消息类型定义
@@ -122,8 +122,8 @@ class NewsItem(BaseModel):
 class NodeData(BaseModel):
     user_id: Union[str, int]
     nickname: str
-    content: List[MsgNodeUnion]
-    news: List[NewsItem] | None = None
+    content: list[MsgNodeUnion]
+    news: list[NewsItem] | None = None
     prompt: str | None = None
     summary: str | None = None
     source: str | None = None

@@ -1,5 +1,5 @@
 # region 数据结构
-from typing import Tuple, Generic, TypeVar, Any, Callable, Literal
+from typing import Generic, TypeVar, Any, Callable, Literal
 
 T = TypeVar("T")
 # ----------
@@ -36,7 +36,7 @@ import os, re
 from . import Message, valMsg, valMessages
 
 sendType = Literal["group", "private"]
-botResult = Tuple[bool, dict]
+botResult = tuple[bool, dict]
 # ----------
 
 
