@@ -1,4 +1,4 @@
-from .cfg import cfg, ACCOUNT_PATH, DB_PATH
+from .config import cfg, ACCOUNT_PATH, DB_PATH
 
 from .db import DataBase
 

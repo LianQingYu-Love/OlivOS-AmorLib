@@ -1,5 +1,4 @@
-import os
-import configparser
+import os, configparser
 
 # 配置文件路径
 CONFIG_PATH = "AmorLib/config.ini"
