@@ -16,8 +16,7 @@ class DataBase:
             self.cursor = self.db.cursor()
             return self
         except sqlite3.Error as e:
-            print(f"数据库连接失败: {e}")
-            raise
+            raise ConnectionError(f"连接失败：{str(e)}") from e
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.db:
@@ -25,11 +24,11 @@ class DataBase:
                 if exc_type is not None:
                     # 执行失败，发动事务回滚
                     self.db.rollback()
-                    print(f"数据库操作失败: {exc_val}")
+                    print(f"数据库操作回滚: \n{str(exc_val)}")
                 else:
                     self.db.commit()
             except Exception as e:
-                print(f"数据库操作失败: {e}")
+                print(f"数据库事务处理失败：{str(e)}")
             finally:
                 if self.cursor:
                     self.cursor.close()
@@ -41,11 +40,11 @@ class DataBase:
             raise RuntimeError("数据库连接未建立，请在 'with' 语句块中使用。")
         try:
             self.cursor.execute(sql, params)
-            if self.cursor.description:
-                return self.cursor.fetchall()
+            return self.cursor.fetchall() if self.cursor.description else None
         except sqlite3.Error as e:
-            raise RuntimeError(f"数据库操作失败: {e}") from e
+            raise RuntimeError(f"SQL执行失败: {str(e)}") from e
 
+    # region sql
     def insert(self, table: str, data: dict[str, Any]) -> int | None:
         """插入数据并返回最后插入的rowid
 
@@ -69,8 +68,12 @@ class DataBase:
         """
         assert self.cursor is not None
         sql = f"INSERT INTO {table} ({', '.join(data.keys())}) VALUES ({', '.join(['?'] * len(data))})"
-        self.execute(sql, tuple(data.values()))
-        return self.cursor.lastrowid
+        params = tuple(data.values())
+        try:
+            self.execute(sql, params)
+            return self.cursor.lastrowid
+        except RuntimeError as e:
+            raise RuntimeError(f"[INSERT]数据插入失败{str(e)}") from None
 
     def update(
         self,
@@ -105,8 +108,11 @@ class DataBase:
         set_clause = ", ".join([f"{k} = ?" for k in data.keys()])
         sql = f"UPDATE {table} SET {set_clause} WHERE {where}"
         params = tuple(data.values()) + where_params
-        self.execute(sql, *params)
-        return self.cursor.rowcount
+        try:
+            self.execute(sql, *params)
+            return self.cursor.rowcount
+        except RuntimeError as e:
+            raise RuntimeError(f"[UPDATE]数据更新失败| {str(e)}") from None
 
     def delete(
         self,
@@ -140,10 +146,13 @@ class DataBase:
         """
         assert self.cursor is not None
         sql = f"DELETE FROM {table} WHERE {where}"
-        self.execute(sql, *where_params)
-        return self.cursor.rowcount
+        try:
+            self.execute(sql, *where_params)
+            return self.cursor.rowcount
+        except RuntimeError as e:
+            raise RuntimeError(f"[DELETE]数据删除失败| {str(e)}") from None
 
-    def truncate_table(self, table: str) -> bool:
+    def truncate_table(self, table: str) -> None:
         """清空表
 
         Args:
@@ -153,15 +162,13 @@ class DataBase:
             bool: 是否成功清空
         """
         assert self.cursor is not None
+        sql = f"DELETE FROM {table}"
         try:
-            sql = f"DELETE FROM {table}"
             self.execute(sql)
-            return True
-        except sqlite3.Error as e:
-            print(f"数据库清空表失败: {e}")
-            return False
+        except RuntimeError as e:
+            raise RuntimeError(f"[DELETE]清空表失败| {str(e)}") from None
 
-    def drop_table(self, table: str) -> bool:
+    def drop_table(self, table: str) -> None:
         """删除表
 
         Args:
@@ -171,23 +178,21 @@ class DataBase:
             bool: 是否成功删除
         """
         assert self.cursor is not None
+        sql = f"DROP TABLE IF EXISTS {table}"
         try:
-            sql = f"DROP TABLE IF EXISTS {table}"
             self.execute(sql)
-            return True
-        except sqlite3.Error as e:
-            print(f"数据库删除表失败: {e}")
-            return False
+        except RuntimeError as e:
+            raise RuntimeError(f"[DROP]删除表失败| {str(e)}") from None
 
     def create_table(
         self,
         table: str,
-        columns: dict[str, Union[Type, str]],
+        columns: dict[str, Union[Type[int], Type[float], Type[str], str]],
         primary_key: str | list[str] | None = None,
         foreign_keys: dict[str, dict[str, str]] | None = None,
         unique_constraints: list[str] | list[list[str]] | None = None,
         auto_increment: bool = False,
-    ) -> bool:
+    ) -> None:
         """创建表
 
         Args:
@@ -227,63 +232,161 @@ class DataBase:
         """
         assert self.cursor is not None
 
-        # 数据类型映射
-        type_mapping = {int: "INTEGER", str: "TEXT", float: "REAL", bool: "INTEGER"}
+        # 构建列定义
+        type_mapping = {
+            int: "INTEGER",
+            str: "TEXT",
+            float: "REAL",
+            "NOW": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        }
+        column_defs = []
         for column_name, column_type in columns.items():
             if column_type in type_mapping:
                 # 使用映射的数据类型
-                columns[column_name] = type_mapping[column_type]
+                column_type = type_mapping[column_type]
+            column_def = f"{column_name} {column_type}"
+
+            # 如果是自增主键列，添加 AUTOINCREMENT
+            if (
+                auto_increment
+                and primary_key
+                and isinstance(primary_key, str)
+                and column_name == primary_key
+                and column_type.upper() == "INTEGER"
+            ):
+                column_def += " PRIMARY KEY AUTOINCREMENT"
+                primary_key = None
+
+            column_defs.append(column_def)
+
+        # 添加主键约束
+        if primary_key:
+            if isinstance(primary_key, list):
+                pk_columns = ", ".join(primary_key)  # 复合主键
             else:
-                # 直接使用字符串定义
-                columns[column_name] = column_type
-        try:
-            # 构建列定义
-            column = []
-            for column_name, column_type in columns.items():
-                column_def = f"{column_name} {column_type}"
-                # 如果是自增主键列，添加 AUTOINCREMENT
-                if (
-                    auto_increment
-                    and primary_key
-                    and isinstance(primary_key, str)
-                    and column_name == primary_key
-                    and column_type.upper() == "INTEGER"
-                ):
-                    column_def += " AUTOINCREMENT"
-                column.append(column_def)
+                pk_columns = primary_key  # 单主键
+            column_defs.append(f"PRIMARY KEY ({pk_columns})")
 
-            # 添加主键约束
-            if primary_key:
-                if isinstance(primary_key, list):
-                    pk_columns = ", ".join(primary_key)  # 复合主键
+        # 添加外键约束
+        if foreign_keys:
+            for column_name, ref in foreign_keys.items():
+                ref_table = list(ref.keys())[0]
+                column_defs.append(
+                    f"FOREIGN KEY ({column_name}) REFERENCES {ref_table}({ref[ref_table]})"
+                )
+
+        # 添加唯一约束
+        if unique_constraints:
+            for constraint in unique_constraints:
+                if isinstance(constraint, list):
+                    column_defs.append(
+                        f"UNIQUE ({", ".join(constraint)})"
+                    )  # 复合唯一约束
                 else:
-                    pk_columns = primary_key  # 单主键
-                column.append(f"PRIMARY KEY ({pk_columns})")
+                    column_defs.append(f"UNIQUE ({constraint})")  # 单列唯一约束
 
-            # 添加外键约束
-            if foreign_keys:
-                for column_name, ref in foreign_keys.items():
-                    ref_table = list(ref.keys())[0]
-                    column.append(
-                        f"FOREIGN KEY ({column_name}) REFERENCES {ref_table}({ref[ref_table]})"
-                    )
-
-            # 添加唯一约束
-            if unique_constraints:
-                for constraint in unique_constraints:
-                    if isinstance(constraint, list):
-                        column.append(
-                            f"UNIQUE ({", ".join(constraint)})"
-                        )  # 复合唯一约束
-                    else:
-                        column.append(f"UNIQUE ({constraint})")  # 单列唯一约束
-
-            # 构建完整的CREATE TABLE语句
-            sql = (
-                f"CREATE TABLE IF NOT EXISTS {table} (\n    {",\n    ".join(column)}\n)"
-            )
+        # 构建完整的CREATE TABLE语句
+        sql = f"CREATE TABLE IF NOT EXISTS {table} (\n    {",\n    ".join(column_defs)}\n)"
+        try:
             self.execute(sql)
-            return True
-        except sqlite3.Error as e:
-            print(f"数据库创建表失败: {e}")
-            return False
+        except RuntimeError as e:
+            raise RuntimeError(f"[CREATE]创建表失败| {str(e)}") from None
+
+    def get_table_schema(self, table: str) -> dict[str, Any] | None:
+        """获取表的结构信息
+
+        Args:
+            table (str): 表名
+
+        Returns:
+            dict[str, Any] | None: 表结构信息字典，包含列信息、主键、外键等
+
+        Example:
+            >>> with DataBase() as db:
+            >>>     # 获取表结构并自动打印
+            >>>     schema = db.get_table_schema("users")
+            >>>     if schema:
+            >>>         # 可以继续使用返回的数据结构
+            >>>         print(f"表有 {len(schema['columns'])} 列")
+        """
+        assert self.cursor is not None
+        try:
+            # 检查表是否存在
+            self.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)
+            )
+            if not self.cursor.fetchone():
+                return None
+
+            schema_info = {
+                "table_name": table,
+                "columns": [],
+                "primary_key": [],
+                "foreign_keys": [],
+                "unique_constraints": [],
+            }
+
+            # 获取列信息
+            self.execute(f"PRAGMA table_info({table})")
+            columns = self.cursor.fetchall()
+
+            for col in columns:
+                column_info = {
+                    "name": col["name"],
+                    "type": col["type"],
+                    "not_null": bool(col["notnull"]),
+                    "default_value": col["dflt_value"],
+                    "pk": bool(col["pk"]),
+                    "constraints": "",
+                }
+
+                # 构建约束字符串
+                constraints = []
+                if col["notnull"]:
+                    constraints.append("NOT NULL")
+                if col["pk"]:
+                    constraints.append("PRIMARY KEY")
+                if col["dflt_value"] is not None:
+                    constraints.append(f"DEFAULT {col['dflt_value']}")
+
+                column_info["constraints"] = " ".join(constraints)
+                schema_info["columns"].append(column_info)
+
+                # 记录主键列
+                if col["pk"]:
+                    schema_info["primary_key"].append(col["name"])
+
+            # 获取外键信息
+            self.execute(f"PRAGMA foreign_key_list({table})")
+            foreign_keys = self.cursor.fetchall()
+
+            for fk in foreign_keys:
+                fk_info = {
+                    "from_column": fk["from"],
+                    "to_table": fk["table"],
+                    "to_column": fk["to"],
+                    "on_update": fk["on_update"],
+                    "on_delete": fk["on_delete"],
+                }
+                schema_info["foreign_keys"].append(fk_info)
+
+            # 获取索引信息（用于识别唯一约束）
+            self.execute(f"PRAGMA index_list({table})")
+            indexes = self.cursor.fetchall()
+
+            for idx in indexes:
+                if idx["unique"]:
+                    # 获取索引列
+                    self.execute(f"PRAGMA index_info({idx['name']})")
+                    index_cols = self.cursor.fetchall()
+                    unique_cols = [col["name"] for col in index_cols]
+
+                    # 排除主键的唯一约束
+                    if set(unique_cols) != set(schema_info["primary_key"]):
+                        schema_info["unique_constraints"].append(unique_cols)
+
+            return schema_info
+        except RuntimeError as e:
+            raise RuntimeError(f"[PRAGMA]获取表结构失败| {str(e)}") from None
+
+    # endregion

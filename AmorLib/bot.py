@@ -223,7 +223,7 @@ from . import ACCOUNT_PATH
 # ----------
 
 class BotClient:
-    def __init__(self, bot_id: int, bot_nick: str = "bot") -> None:
+    def __init__(self, bot_id: int, bot_nick: str | None = None) -> None:
         self.url = None
         with open(ACCOUNT_PATH, "r", encoding="utf-8") as f:
             account = json.load(f)["account"]
@@ -236,7 +236,11 @@ class BotClient:
                         "Authorization": f"Bearer {server['access_token']}",
                     }
                     self.id = bot_id
-                    self.nick = bot_nick
+                    if bot_nick:
+                        self.nick = bot_nick
+                    else:
+                        _, bot_info = self.accountWork.get_stranger_info(bot_id)
+                        self.nick = bot_info['data']['nick']
                     break
         if self.url is None:
             raise ValueError(f"未找到匹配的bot账号。")
