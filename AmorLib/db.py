@@ -73,7 +73,7 @@ class DataBase:
             self.execute(sql, params)
             return self.cursor.lastrowid
         except RuntimeError as e:
-            raise RuntimeError(f"[INSERT]数据插入失败{str(e)}") from None
+            raise RuntimeError(f"[INSERT]数据插入失败| {str(e)}") from None
 
     def update(
         self,
@@ -152,7 +152,7 @@ class DataBase:
         except RuntimeError as e:
             raise RuntimeError(f"[DELETE]数据删除失败| {str(e)}") from None
 
-    def truncate_table(self, table: str) -> None:
+    def truncate(self, table: str) -> None:
         """清空表
 
         Args:
@@ -168,7 +168,7 @@ class DataBase:
         except RuntimeError as e:
             raise RuntimeError(f"[DELETE]清空表失败| {str(e)}") from None
 
-    def drop_table(self, table: str) -> None:
+    def drop(self, table: str) -> None:
         """删除表
 
         Args:
@@ -184,7 +184,7 @@ class DataBase:
         except RuntimeError as e:
             raise RuntimeError(f"[DROP]删除表失败| {str(e)}") from None
 
-    def create_table(
+    def create(
         self,
         table: str,
         columns: dict[str, Union[Type[int], Type[float], Type[str], str]],
@@ -231,16 +231,24 @@ class DataBase:
             >>>     unique_constraints=[["user_id", "product"]])
         """
         assert self.cursor is not None
-
+        # region create
         # 构建列定义
         type_mapping = {
-            int: "INTEGER",
-            str: "TEXT",
-            float: "REAL",
+            "int": "INTEGER",
+            "float": "REAL",
+            "str": "TEXT",
             "NOW": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         }
         column_defs = []
         for column_name, column_type in columns.items():
+            if not (
+                (isinstance(column_type, type) and column_type in (int, float, str))
+                or isinstance(column_type, str)
+            ):
+                raise RuntimeError(
+                    f"[CREATE]创建表失败: columns类型定义错误, 仅允许<class 'int'>、<class 'float'>、 <class 'str'>、 str类型| key: '{column_name}' is {column_type}"
+                ) from None
+            column_type = str(column_type)
             if column_type in type_mapping:
                 # 使用映射的数据类型
                 column_type = type_mapping[column_type]
@@ -284,7 +292,7 @@ class DataBase:
                     )  # 复合唯一约束
                 else:
                     column_defs.append(f"UNIQUE ({constraint})")  # 单列唯一约束
-
+        # endregion
         # 构建完整的CREATE TABLE语句
         sql = f"CREATE TABLE IF NOT EXISTS {table} (\n    {",\n    ".join(column_defs)}\n)"
         try:
@@ -292,7 +300,7 @@ class DataBase:
         except RuntimeError as e:
             raise RuntimeError(f"[CREATE]创建表失败| {str(e)}") from None
 
-    def get_table_schema(self, table: str) -> dict[str, Any] | None:
+    def get_schema(self, table: str) -> dict[str, Any] | None:
         """获取表的结构信息
 
         Args:
@@ -311,6 +319,7 @@ class DataBase:
         """
         assert self.cursor is not None
         try:
+            # region get schema
             # 检查表是否存在
             self.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)
@@ -318,7 +327,7 @@ class DataBase:
             if not self.cursor.fetchone():
                 return None
 
-            schema_info = {
+            schema = {
                 "table_name": table,
                 "columns": [],
                 "primary_key": [],
@@ -329,7 +338,6 @@ class DataBase:
             # 获取列信息
             self.execute(f"PRAGMA table_info({table})")
             columns = self.cursor.fetchall()
-
             for col in columns:
                 column_info = {
                     "name": col["name"],
@@ -350,16 +358,15 @@ class DataBase:
                     constraints.append(f"DEFAULT {col['dflt_value']}")
 
                 column_info["constraints"] = " ".join(constraints)
-                schema_info["columns"].append(column_info)
+                schema["columns"].append(column_info)
 
                 # 记录主键列
                 if col["pk"]:
-                    schema_info["primary_key"].append(col["name"])
+                    schema["primary_key"].append(col["name"])
 
             # 获取外键信息
             self.execute(f"PRAGMA foreign_key_list({table})")
             foreign_keys = self.cursor.fetchall()
-
             for fk in foreign_keys:
                 fk_info = {
                     "from_column": fk["from"],
@@ -368,12 +375,11 @@ class DataBase:
                     "on_update": fk["on_update"],
                     "on_delete": fk["on_delete"],
                 }
-                schema_info["foreign_keys"].append(fk_info)
+                schema["foreign_keys"].append(fk_info)
 
             # 获取索引信息（用于识别唯一约束）
             self.execute(f"PRAGMA index_list({table})")
             indexes = self.cursor.fetchall()
-
             for idx in indexes:
                 if idx["unique"]:
                     # 获取索引列
@@ -382,10 +388,10 @@ class DataBase:
                     unique_cols = [col["name"] for col in index_cols]
 
                     # 排除主键的唯一约束
-                    if set(unique_cols) != set(schema_info["primary_key"]):
-                        schema_info["unique_constraints"].append(unique_cols)
-
-            return schema_info
+                    if set(unique_cols) != set(schema["primary_key"]):
+                        schema["unique_constraints"].append(unique_cols)
+            # endregion
+            return schema
         except RuntimeError as e:
             raise RuntimeError(f"[PRAGMA]获取表结构失败| {str(e)}") from None
 

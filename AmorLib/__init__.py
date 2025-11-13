@@ -1,4 +1,4 @@
-from .config import cfg, ACCOUNT_PATH, DB_PATH
+from .config import ACCOUNT_PATH, DB_PATH, CONF_DIR, DATA_DIR, TMP_DIR
 
 from .db import DataBase
 
