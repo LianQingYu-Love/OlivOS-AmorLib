@@ -40,7 +40,8 @@ class DataBase:
             finally:
                 if self.cursor:
                     self.cursor.close()
-                self.db.close()
+                if self.db:
+                    self.db.close()
         return False
 
     # endregion
@@ -51,29 +52,24 @@ class DataBase:
             self.cursor.execute(sql, params)
             return self.cursor.fetchall() if self.cursor.description else None
         except sqlite3.Error as e:
-            raise RuntimeError(f"SQL执行失败: {str(e)}") from e
+            raise RuntimeError(f"SQL语句执行失败: {str(e)}") from e
 
     # region execute
     def insert(self, table: str, data: dict[str, Any]) -> int | None:
-        """插入数据并返回最后插入的rowid
-
+        """插入数据
         Args:
-            table (str): 要插入数据的表名
-            data (dict[str, Any]): 要插入的数据字典，键为列名，值为对应的数据
-
+            table (str): 表名
+            data (dict[str, Any]): 插入的数据，键为列名，值为数据
         Returns:
-            int | None: 返回最后插入行的rowid
-
+            int | None: 最后插入行的rowid
         Example:
             >>> with DataBase(db_path) as db:
-            >>>     # 插入一条用户记录
             >>>     new_id = db.insert("users", {
             >>>         "username": "Alice",
             >>>         "email": "Alice@example.com",
             >>>         "age": 17,
             >>>         "created_at": "2023-01-01 10:00:00"
             >>>     })
-            >>>     print(f"新用户的ID是: {new_id}")
         """
         assert self.cursor is not None
         sql = f"INSERT INTO {table} ({', '.join(data.keys())}) VALUES ({', '.join(['?'] * len(data))})"
@@ -92,26 +88,21 @@ class DataBase:
         *where_params: Any,
     ) -> int:
         """更新数据
-
         Args:
             table (str): 表名
-            data (dict[str, Any]): 要更新的数据字典，键为列名，值为对应的数据
+            data (dict[str, Any]): 更新的数据字，键为列名，值为数据
             where (str): WHERE条件语句
             *where_params (Any): WHERE条件参数
-
         Returns:
-            int: 影响的行数
-
+            int: 影响行数
         Example:
             >>> with DataBase(db_path) as db:
-            >>>     # 更新用户名为Alice的记录的年龄
             >>>     count = db.update(
             >>>         "users",
             >>>         {"age": 25},
             >>>         "username = ?",
             >>>         "Alice"
             >>>     )
-            >>>     print(f"更新了 {count} 条记录")
         """
         assert self.cursor is not None
         set_clause = ", ".join([f"{k} = ?" for k in data.keys()])
@@ -130,20 +121,15 @@ class DataBase:
         *where_params: Any,
     ) -> int:
         """删除数据
-
         Args:
             table (str): 表名
             where (str): WHERE条件语句
             *where_params (Any): WHERE条件参数
-
         Returns:
             int: 删除的行数
-
         Example:
             >>> with DataBase(db_path) as db:
-            >>>     # 删除所有age大于30的记录
             >>>     count = db.delete("users", "age > ?", 30)
-            >>>     print(f"删除了 {count} 条记录")
         """
         assert self.cursor is not None
         sql = f"DELETE FROM {table} WHERE {where}"
@@ -155,9 +141,8 @@ class DataBase:
 
     def truncate(self, table: str) -> None:
         """清空表
-
         Args:
-            table (str): 要清空的表名
+            table (str): 表名
         """
         assert self.cursor is not None
         sql = f"DELETE FROM {table}"
@@ -168,9 +153,8 @@ class DataBase:
 
     def drop(self, table: str) -> None:
         """删除表
-
         Args:
-            table (str): 要删除的表名
+            table (str): 表名
         """
         assert self.cursor is not None
         sql = f"DROP TABLE IF EXISTS {table}"
@@ -297,17 +281,13 @@ class DataBase:
             raise RuntimeError(f"[CREATE]创建表失败| {str(e)}") from None
 
     def get_schema(self, table: str) -> dict[str, Any] | None:
-        """获取表的结构信息
-
+        """获取表的结构
         Args:
             table (str): 表名
-
         Returns:
-            dict[str, Any] | None: 表结构信息字典
-
+            dict[str, Any] | None: 表的结构
         Example:
             >>> with DataBase(db_path) as db:
-            >>>     # 获取表结构
             >>>     schema = db.get_table_schema("users")
         """
         assert self.cursor is not None
