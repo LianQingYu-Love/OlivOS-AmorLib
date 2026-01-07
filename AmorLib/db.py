@@ -1,14 +1,15 @@
 """
-    sqlite3 数据库操作工具包
-    该模块提供了一些简易使用 SQLite 数据库的方法。
-    >>> with DataBase(db_path) as db:
-    >>>     db.execute(sql, *params) 
+sqlite3 数据库操作工具包
+该模块提供了一些简易使用 SQLite 数据库的方法。
+>>> with DataBase(db_path) as db:
+>>>     db.execute(sql, *params)
 """
-
 
 import sqlite3
 from typing import Any, Union, Type
+
 DB_PATH = "plugin/data/AmorLib.db"
+
 
 class DataBase:
     # region with
@@ -173,23 +174,20 @@ class DataBase:
         auto_increment: bool = False,
     ) -> None:
         """创建表
-
         Args:
             table (str): 表名
-            columns (dict[str, Union[Type[int], Type[float], Type[str], str]]): 列定义字典，键为列名，值为数据类型或完整的列定义字符串
+            columns (dict[str, Union[Type[int], Type[float], Type[str], str]]): 列定义，键为列名，值为数据类型或完整的列定义字符串
                 - int: "INTEGER",
                 - float: "REAL",
                 - str: "TEXT",
                 - "NOW": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
                 - 直接使用SQL类型字符串
             primary_key (str | list[str] | None): 主键列名或列名列表. Defaults to None.
-            foreign_keys (dict[str, dict[str, str]] | None): 外键定义字典，格式为 {列名: {参考表: 参考列}}. Defaults to None.
+            foreign_keys (dict[str, dict[str, str]] | None): 外键定义，格式为 {列名: {参考表: 参考列}}. Defaults to None.
             unique_constraints (list[str] | list[list[str]] | None): 唯一约束，可以是单列列表或多列组合列表. Defaults to None.
-            auto_increment (bool): 是否为主键启用自增（仅适用于单列整数主键）. Defaults to False.
-
+            auto_increment (bool): 主键是否自增（仅适用于单列整数主键）. Defaults to False.
         Example:
             >>> with DataBase(db_path) as db:
-            >>>     # 简单创建表
             >>>     db.create_table("users", {
             >>>         "user_id": int,
             >>>         "name": str,
@@ -197,7 +195,6 @@ class DataBase:
             >>>         "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
             >>>     }, primary_key="user_id")
             >>>
-            >>>     # 创建带外键和唯一约束的表
             >>>     db.create_table("orders", {
             >>>         "order_id": int,
             >>>         "user_id": int,
