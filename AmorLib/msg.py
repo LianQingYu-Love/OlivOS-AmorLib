@@ -141,7 +141,7 @@ class NodeMsg(BaseModel):
                 "content": list(content),
             },
         }
-        return valMsg(data, type="node")
+        return val_msg(data, type="node")
 
 # 艾特
 class AtData(BaseModel):
@@ -158,7 +158,7 @@ class AtMsg(BaseModel):
                 "qq": str(user_id),
             },
         }
-        return valMsg(data, type="at")
+        return val_msg(data, type="at")
 
 # endregion
 
@@ -183,7 +183,7 @@ class Message:
     at = AtMsg
 
 
-def valMsg(
+def val_msg(
     msg: dict,
     type: msgType | None = None,
 ) -> dict:
@@ -223,7 +223,7 @@ def valMsg(
         raise ValueError(f"消息验证错误: {str(e)}") from e
 
 
-def valMessages(*messages: dict, type: msgType | None = None):
+def val_msgs(*messages: dict, type: msgType | None = None):
     """消息结构验证
     Args:
         *messages (dict): 消息
@@ -242,7 +242,7 @@ def valMessages(*messages: dict, type: msgType | None = None):
     err_list = []
     for index, msg in enumerate(messages):
         try:
-            valMsg(msg, type)
+            val_msg(msg, type)
         except Exception as e:
             err_list.append(f"第{index+1}条消息验证错误：\n  {e}")
     if err_list:

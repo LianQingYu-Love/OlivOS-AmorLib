@@ -1,11 +1,19 @@
-from typing import Any, Union, Type
-import sqlite3
-from . import DB_PATH
+"""
+    sqlite3 数据库操作工具包
+    该模块提供了一些简易使用 SQLite 数据库的方法。
+    >>> with DataBase(db_path) as db:
+    >>>     db.execute(sql, *params) 
+"""
 
+
+import sqlite3
+from typing import Any, Union, Type
+DB_PATH = "plugin/data/AmorLib.db"
 
 class DataBase:
-    def __init__(self, db: str = DB_PATH) -> None:
-        self.db_path = db
+    # region with
+    def __init__(self, db_path: str = DB_PATH) -> None:
+        self.db_path = db_path
         self.db: sqlite3.Connection | None = None
         self.cursor: sqlite3.Cursor | None = None
 
@@ -16,7 +24,7 @@ class DataBase:
             self.cursor = self.db.cursor()
             return self
         except sqlite3.Error as e:
-            raise ConnectionError(f"连接失败：{str(e)}") from e
+            raise ConnectionError(f"数据库连接失败：{str(e)}") from e
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.db:
@@ -35,6 +43,7 @@ class DataBase:
                 self.db.close()
         return False
 
+    # endregion
     def execute(self, sql: str, *params: Any) -> list[sqlite3.Row] | None:
         if not self.db or not self.cursor:
             raise RuntimeError("数据库连接未建立，请在 'with' 语句块中使用。")
@@ -44,7 +53,7 @@ class DataBase:
         except sqlite3.Error as e:
             raise RuntimeError(f"SQL执行失败: {str(e)}") from e
 
-    # region sql
+    # region execute
     def insert(self, table: str, data: dict[str, Any]) -> int | None:
         """插入数据并返回最后插入的rowid
 
@@ -56,12 +65,12 @@ class DataBase:
             int | None: 返回最后插入行的rowid
 
         Example:
-            >>> with DataBase() as db:
+            >>> with DataBase(db_path) as db:
             >>>     # 插入一条用户记录
             >>>     new_id = db.insert("users", {
-            >>>         "username": "alice",
-            >>>         "email": "alice@example.com",
-            >>>         "age": 25,
+            >>>         "username": "Alice",
+            >>>         "email": "Alice@example.com",
+            >>>         "age": 17,
             >>>         "created_at": "2023-01-01 10:00:00"
             >>>     })
             >>>     print(f"新用户的ID是: {new_id}")
@@ -94,7 +103,7 @@ class DataBase:
             int: 影响的行数
 
         Example:
-            >>> with DataBase() as db:
+            >>> with DataBase(db_path) as db:
             >>>     # 更新用户名为Alice的记录的年龄
             >>>     count = db.update(
             >>>         "users",
@@ -131,17 +140,9 @@ class DataBase:
             int: 删除的行数
 
         Example:
-            >>> with DataBase() as db:
+            >>> with DataBase(db_path) as db:
             >>>     # 删除所有age大于30的记录
             >>>     count = db.delete("users", "age > ?", 30)
-            >>>     print(f"删除了 {count} 条记录")
-
-            >>>     # 删除指定用户名的记录
-            >>>     count = db.delete("users", "username = ?", "Alice")
-            >>>     print(f"删除了 {count} 条记录")
-
-            >>>     # 删除满足多个条件的记录
-            >>>     count = db.delete("users", "age > ? AND status = ?", 30, "inactive")
             >>>     print(f"删除了 {count} 条记录")
         """
         assert self.cursor is not None
@@ -157,9 +158,6 @@ class DataBase:
 
         Args:
             table (str): 要清空的表名
-
-        Returns:
-            bool: 是否成功清空
         """
         assert self.cursor is not None
         sql = f"DELETE FROM {table}"
@@ -173,9 +171,6 @@ class DataBase:
 
         Args:
             table (str): 要删除的表名
-
-        Returns:
-            bool: 是否成功删除
         """
         assert self.cursor is not None
         sql = f"DROP TABLE IF EXISTS {table}"
@@ -197,18 +192,19 @@ class DataBase:
 
         Args:
             table (str): 表名
-            columns (dict[str, Union[Type, str]]): 列定义字典，键为列名，值为数据类型或完整的列定义字符串
-                    支持的数据类型: int, str, float, bool, 或直接使用SQL类型字符串
+            columns (dict[str, Union[Type[int], Type[float], Type[str], str]]): 列定义字典，键为列名，值为数据类型或完整的列定义字符串
+                - int: "INTEGER",
+                - float: "REAL",
+                - str: "TEXT",
+                - "NOW": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                - 直接使用SQL类型字符串
             primary_key (str | list[str] | None): 主键列名或列名列表. Defaults to None.
             foreign_keys (dict[str, dict[str, str]] | None): 外键定义字典，格式为 {列名: {参考表: 参考列}}. Defaults to None.
             unique_constraints (list[str] | list[list[str]] | None): 唯一约束，可以是单列列表或多列组合列表. Defaults to None.
             auto_increment (bool): 是否为主键启用自增（仅适用于单列整数主键）. Defaults to False.
 
-        Returns:
-            bool: 是否成功创建
-
         Example:
-            >>> with DataBase() as db:
+            >>> with DataBase(db_path) as db:
             >>>     # 简单创建表
             >>>     db.create_table("users", {
             >>>         "user_id": int,
@@ -307,15 +303,12 @@ class DataBase:
             table (str): 表名
 
         Returns:
-            dict[str, Any] | None: 表结构信息字典，包含列信息、主键、外键等
+            dict[str, Any] | None: 表结构信息字典
 
         Example:
-            >>> with DataBase() as db:
-            >>>     # 获取表结构并自动打印
+            >>> with DataBase(db_path) as db:
+            >>>     # 获取表结构
             >>>     schema = db.get_table_schema("users")
-            >>>     if schema:
-            >>>         # 可以继续使用返回的数据结构
-            >>>         print(f"表有 {len(schema['columns'])} 列")
         """
         assert self.cursor is not None
         try:
@@ -396,3 +389,8 @@ class DataBase:
             raise RuntimeError(f"[PRAGMA]获取表结构失败| {str(e)}") from None
 
     # endregion
+
+
+def db_execute(db_path: str, sql: str, *params: Any) -> list[sqlite3.Row] | None:
+    with DataBase(db_path) as db:
+        return db.execute(sql, *params)

@@ -1,8 +1,12 @@
-from .config import ACCOUNT_PATH, DB_PATH, CONF_DIR, DATA_DIR, TMP_DIR
+__author__ = "星瑚"
+__version__ = "0.1.0"
+__description__ = "提供简易的插件函数"
 
-from .db import DataBase
+from .db import DataBase, db_execute
 
-from .msg import Message, valMsg, valMessages
+from .msg import Message, val_msg, val_msgs
 from .bot import BotClient
 
-from .user import isInMasterList
+from .router import UniqueRouter
+
+# from .user import isInMasterList

@@ -33,7 +33,7 @@ def Lazy(method: Callable[[Any], T]) -> LazyLoad[T]:
 
 # region 功能实现
 import os, re
-from . import Message, valMsg, valMessages
+from . import Message, val_msg, val_msgs
 
 sendType = Literal["group", "private"]
 botResult = tuple[bool, dict]
@@ -54,7 +54,7 @@ class msgWork(BaseWork):
             *messages (dict): 消息的具体内容
         """
         # 消息验证
-        valMessages(*messages)
+        val_msgs(*messages)
         # 处理发送载荷
         url = f"/send_{send_type}_msg"
         payload = {
@@ -84,7 +84,7 @@ class msgWork(BaseWork):
                 - source (sre): 顶部文本
         """
         # 消息验证
-        valMessages(*messages, type="node")
+        val_msgs(*messages, type="node")
         # 处理发送载荷
         url = "/send_forward_msg"
         payload = {
@@ -219,7 +219,7 @@ class accountWork(BaseWork):
 
 # region main
 import requests, json
-from . import ACCOUNT_PATH
+ACCOUNT_PATH = "conf/account.json"
 # ----------
 
 class BotClient:
