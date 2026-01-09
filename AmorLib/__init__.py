@@ -7,6 +7,6 @@ from .db import DataBase, db_execute
 from .msg import Message, val_msg, val_msgs
 from .bot import BotClient
 
-from .router import UniqueRouter
+from .router import UniqueRouter, FsmRouter, PriorityRouter
 
 # from .user import isInMasterList

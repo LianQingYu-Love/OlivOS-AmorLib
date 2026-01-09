@@ -1,4 +1,4 @@
-"""
+""">>>
 sqlite3 数据库操作工具包
 该模块提供了一些简易使用 SQLite 数据库的方法。
 >>> with DataBase(db_path) as db:
@@ -56,6 +56,31 @@ class DataBase:
             raise RuntimeError(f"SQL语句执行失败: {str(e)}") from e
 
     # region execute
+    def select(
+        self, table: str, rows: list | tuple | None = None, where: str | None = None, *where_params: Any
+    ) -> list[sqlite3.Row] | None:
+        """查询数据
+        Args:
+            table (str): 表名
+            rows (list | tuple | None, optional): 查询的列名
+            where (str | None, optional): WHERE条件语句
+            *where_params (Any): 查询参数
+        Returns:
+            list[sqlite3.Row] | None: 查询结果
+        Example:
+            >>> with DataBase(db_path) as db:
+            >>>     rows = db.select("users", ["username", "email"], "age > ?", 18)
+        """
+        assert self.cursor is not None
+        sql = f"SELECT {', '.join(rows) if rows else '*'} FROM {table}"
+        if where:
+            sql += f" WHERE {where}"
+        try:
+            self.execute(sql, *where_params)
+            return self.cursor.fetchall() if self.cursor.description else None
+        except RuntimeError as e:
+            raise RuntimeError(f"[SELECT]数据查询失败| {str(e)}") from None
+
     def insert(self, table: str, data: dict[str, Any]) -> int | None:
         """插入数据
         Args:

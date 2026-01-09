@@ -1,3 +1,8 @@
+""">>>
+napcat api接口集成包
+该模块提供了一些简易使用napcat api的方法。
+"""
+
 # region 数据结构
 from typing import Generic, TypeVar, Any, Callable, Literal
 
