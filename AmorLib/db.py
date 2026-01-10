@@ -7,6 +7,7 @@ sqlite3 数据库操作工具包
 
 import sqlite3
 from typing import Any, Union, Type
+from . import STRING_ROW
 
 DB_PATH = "plugin/data/AmorLib.db"
 
@@ -53,31 +54,43 @@ class DataBase:
             self.cursor.execute(sql, params)
             return self.cursor.fetchall() if self.cursor.description else None
         except sqlite3.Error as e:
-            raise RuntimeError(f"SQL语句执行失败: {str(e)}") from e
+            raise RuntimeError(f"SQL语句执行失败|{sql}\n {str(e)}") from e
 
     # region execute
     def select(
-        self, table: str, rows: list | tuple | None = None, where: str | None = None, *where_params: Any
+        self,
+        table: str,
+        rows: str | list | tuple | None = None,
+        where: str | None = None,
+        *where_params: Any,
+        order: str | None = None,
+        limit: int | None = None, 
+        offset: int | None = None
     ) -> list[sqlite3.Row] | None:
         """查询数据
         Args:
             table (str): 表名
-            rows (list | tuple | None, optional): 查询的列名
-            where (str | None, optional): WHERE条件语句
-            *where_params (Any): 查询参数
+            rows (str | list | tuple | None, optional): 要查询的列. Defaults to None.
+            where (str | None, optional): WHERE条件语句. Defaults to None.
+            *where_params (Any): WHERE条件参数
+            order (str | None, optional): 排序模式. Defaults to None.
+            limit (int | None, optional): 界限. Defaults to None.
+            offset (int | None, optional): 偏差. Defaults to None.
         Returns:
-            list[sqlite3.Row] | None: 查询结果
-        Example:
-            >>> with DataBase(db_path) as db:
-            >>>     rows = db.select("users", ["username", "email"], "age > ?", 18)
+            list[sqlite3.Row] | None: 查询到的数据
         """
         assert self.cursor is not None
-        sql = f"SELECT {', '.join(rows) if rows else '*'} FROM {table}"
+        sql = f"SELECT {rows if type(rows)== str else ', '.join(rows) if rows else '*'} FROM {table}"
         if where:
             sql += f" WHERE {where}"
+        if order and isinstance(order, str) and order.strip():
+            sql += f" ORDER BY {order.strip()}"
+        if limit:
+            sql += f" LIMIT {limit}"
+            if offset:
+                sql += f" OFFSET {offset}"
         try:
-            self.execute(sql, *where_params)
-            return self.cursor.fetchall() if self.cursor.description else None
+            return self.execute(sql, *where_params)
         except RuntimeError as e:
             raise RuntimeError(f"[SELECT]数据查询失败| {str(e)}") from None
 
@@ -88,20 +101,12 @@ class DataBase:
             data (dict[str, Any]): 插入的数据，键为列名，值为数据
         Returns:
             int | None: 最后插入行的rowid
-        Example:
-            >>> with DataBase(db_path) as db:
-            >>>     new_id = db.insert("users", {
-            >>>         "username": "Alice",
-            >>>         "email": "Alice@example.com",
-            >>>         "age": 17,
-            >>>         "created_at": "2023-01-01 10:00:00"
-            >>>     })
         """
         assert self.cursor is not None
         sql = f"INSERT INTO {table} ({', '.join(data.keys())}) VALUES ({', '.join(['?'] * len(data))})"
         params = tuple(data.values())
         try:
-            self.execute(sql, params)
+            self.execute(sql, *params)
             return self.cursor.lastrowid
         except RuntimeError as e:
             raise RuntimeError(f"[INSERT]数据插入失败| {str(e)}") from None
@@ -121,14 +126,6 @@ class DataBase:
             *where_params (Any): WHERE条件参数
         Returns:
             int: 影响行数
-        Example:
-            >>> with DataBase(db_path) as db:
-            >>>     count = db.update(
-            >>>         "users",
-            >>>         {"age": 25},
-            >>>         "username = ?",
-            >>>         "Alice"
-            >>>     )
         """
         assert self.cursor is not None
         set_clause = ", ".join([f"{k} = ?" for k in data.keys()])
@@ -153,9 +150,6 @@ class DataBase:
             *where_params (Any): WHERE条件参数
         Returns:
             int: 删除的行数
-        Example:
-            >>> with DataBase(db_path) as db:
-            >>>     count = db.delete("users", "age > ?", 30)
         """
         assert self.cursor is not None
         sql = f"DELETE FROM {table} WHERE {where}"
@@ -193,64 +187,42 @@ class DataBase:
         self,
         table: str,
         columns: dict[str, Union[Type[int], Type[float], Type[str], str]],
-        primary_key: str | list[str] | None = None,
+        primary_key: str | STRING_ROW | None = None,
         foreign_keys: dict[str, dict[str, str]] | None = None,
-        unique_constraints: list[str] | list[list[str]] | None = None,
+        unique_constraints: (
+            STRING_ROW | list[STRING_ROW] | tuple[STRING_ROW, ...] | None
+        ) = None,
         auto_increment: bool = False,
     ) -> None:
         """创建表
         Args:
             table (str): 表名
-            columns (dict[str, Union[Type[int], Type[float], Type[str], str]]): 列定义，键为列名，值为数据类型或完整的列定义字符串
+            columns (dict[str, Union[Type[int], Type[float], Type[str], str]]): 列定义，键为列名，值为数据类型或完整的列定义
                 - int: "INTEGER",
                 - float: "REAL",
                 - str: "TEXT",
                 - "NOW": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
                 - 直接使用SQL类型字符串
-            primary_key (str | list[str] | None): 主键列名或列名列表. Defaults to None.
+            primary_key (str | list[str] | tuple[str, ...] | None): 主键列名. Defaults to None.
             foreign_keys (dict[str, dict[str, str]] | None): 外键定义，格式为 {列名: {参考表: 参考列}}. Defaults to None.
-            unique_constraints (list[str] | list[list[str]] | None): 唯一约束，可以是单列列表或多列组合列表. Defaults to None.
+            unique_constraints (list[str] | tuple[str, ...] | list[list[str] | tuple[str, ...]] | tuple[list[str] | tuple[str, ...], ...] | None): 唯一约束，可以是单列列表或多列组合列表. Defaults to None.
             auto_increment (bool): 主键是否自增（仅适用于单列整数主键）. Defaults to False.
-        Example:
-            >>> with DataBase(db_path) as db:
-            >>>     db.create_table("users", {
-            >>>         "user_id": int,
-            >>>         "name": str,
-            >>>         "age": int,
-            >>>         "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-            >>>     }, primary_key="user_id")
-            >>>
-            >>>     db.create_table("orders", {
-            >>>         "order_id": int,
-            >>>         "user_id": int,
-            >>>         "product": str,
-            >>>         "amount": float
-            >>>     },
-            >>>     primary_key="order_id",
-            >>>     foreign_keys={
-            >>>         "user_id": {"users": "user_id"}
-            >>>     },
-            >>>     unique_constraints=[["user_id", "product"]])
         """
         assert self.cursor is not None
         # region create
         # 构建列定义
         type_mapping = {
-            "int": "INTEGER",
-            "float": "REAL",
-            "str": "TEXT",
+            int: "INTEGER",
+            float: "REAL",
+            str: "TEXT",
             "NOW": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         }
         column_defs = []
         for column_name, column_type in columns.items():
-            if not (
-                (isinstance(column_type, type) and column_type in (int, float, str))
-                or isinstance(column_type, str)
-            ):
+            if column_type not in (int, float, str) and type(column_type) != str:
                 raise RuntimeError(
                     f"[CREATE]创建表失败: columns类型定义错误, 仅允许<class 'int'>、<class 'float'>、 <class 'str'>、 str类型| key: '{column_name}' is {column_type}"
                 ) from None
-            column_type = str(column_type)
             if column_type in type_mapping:
                 # 使用映射的数据类型
                 column_type = type_mapping[column_type]
@@ -260,7 +232,7 @@ class DataBase:
             if (
                 auto_increment
                 and primary_key
-                and isinstance(primary_key, str)
+                and type(primary_key) == str
                 and column_name == primary_key
                 and column_type.upper() == "INTEGER"
             ):
@@ -271,7 +243,7 @@ class DataBase:
 
         # 添加主键约束
         if primary_key:
-            if isinstance(primary_key, list):
+            if type(primary_key) != str:
                 pk_columns = ", ".join(primary_key)  # 复合主键
             else:
                 pk_columns = primary_key  # 单主键
@@ -288,7 +260,7 @@ class DataBase:
         # 添加唯一约束
         if unique_constraints:
             for constraint in unique_constraints:
-                if isinstance(constraint, list):
+                if type(constraint) != str:
                     column_defs.append(
                         f"UNIQUE ({", ".join(constraint)})"
                     )  # 复合唯一约束
@@ -308,9 +280,6 @@ class DataBase:
             table (str): 表名
         Returns:
             dict[str, Any] | None: 表的结构
-        Example:
-            >>> with DataBase(db_path) as db:
-            >>>     schema = db.get_table_schema("users")
         """
         assert self.cursor is not None
         try:

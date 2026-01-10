@@ -13,12 +13,14 @@
 """
 
 import re
+from . import STRING_ROW
 
 
 class UniqueRouter:
     """
     依次匹配直到匹配成功
     """
+
     def __init__(self) -> None:
         self._forward = []
 
@@ -29,9 +31,9 @@ class UniqueRouter:
 
         return decorator
 
-    def match(self, msg: str):
+    def search(self, msg: str):
         for pattern, handler in self._forward:
-            match = re.match(pattern, msg)
+            match = re.search(pattern, msg)
             if match:
                 return handler, match.groups()
         return None, None
@@ -41,24 +43,37 @@ class FsmRouter:
     """
     依次匹配对应状态的命令
     """
-    def __init__(self) -> None:
-        self._forward = {}
 
-    def route(self, state: str, pattern: str):
-        if state not in self._forward.keys():
-            self._forward[state] = []
+    def __init__(self, states: STRING_ROW) -> None:
+        self._states = {}
+        self._forward = []
+        for state in states:
+            self._states[state] = []
+
+    def route(self, states: str | STRING_ROW, pattern: str):
+        if type(states) == str:
+            states = (states,)
+        if any(state not in self._states.keys() for state in states):
+            raise ValueError("状态路由器录入命令的状态非法。")
 
         def decorator(handler):
-            self._forward[state].append((re.compile(pattern), handler))
+            for state in states:
+                self._states[state].append(len(self._forward))
+            self._forward.append((re.compile(pattern), handler))
             return handler
 
         return decorator
 
-    def match(self, state: str, msg: str):
-        if state not in self._forward.keys():
-            return None, None
-        for pattern, handler in self._forward[state]:
-            match = re.match(pattern, msg)
+    def search(self, states: str | STRING_ROW, msg: str):
+        if type(states) == str:
+            states = (states,)
+        cmd_unique_index = set()
+        for state in states:
+            if state in self._states.keys():
+                cmd_unique_index.update(self._states[state])
+        for cmd_index in cmd_unique_index:
+            pattern, handler = self._forward[cmd_index]
+            match = re.search(pattern, msg)
             if match:
                 return handler, match.groups()
         return None, None
@@ -68,6 +83,7 @@ class PriorityRouter:
     """
     按优先级依次匹配
     """
+
     def __init__(self) -> None:
         self._forward = []
 
@@ -79,9 +95,9 @@ class PriorityRouter:
 
         return decorator
 
-    def match(self, msg: str):
+    def search(self, msg: str):
         for _, pattern, handler in self._forward:
-            match = re.match(pattern, msg)
+            match = re.search(pattern, msg)
             if match:
                 return handler, match.groups()
         return None, None
