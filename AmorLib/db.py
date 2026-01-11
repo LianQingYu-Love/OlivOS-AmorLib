@@ -47,12 +47,12 @@ class DataBase:
         return False
 
     # endregion
-    def execute(self, sql: str, *params: Any) -> list[sqlite3.Row] | None:
+    def execute(self, sql: str, *params: Any) -> list[sqlite3.Row]:
         if not self.db or not self.cursor:
             raise RuntimeError("数据库连接未建立，请在 'with' 语句块中使用。")
         try:
             self.cursor.execute(sql, params)
-            return self.cursor.fetchall() if self.cursor.description else None
+            return self.cursor.fetchall() if self.cursor.description else []
         except sqlite3.Error as e:
             raise RuntimeError(f"SQL语句执行失败|{sql}\n {str(e)}") from e
 
@@ -66,7 +66,7 @@ class DataBase:
         order: str | None = None,
         limit: int | None = None, 
         offset: int | None = None
-    ) -> list[sqlite3.Row] | None:
+    ) -> list[sqlite3.Row]:
         """查询数据
         Args:
             table (str): 表名
