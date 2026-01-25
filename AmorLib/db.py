@@ -273,7 +273,7 @@ class DataBase:
             for constraint in unique_constraints:
                 if type(constraint) != str:
                     column_defs.append(
-                        f"UNIQUE ({", ".join(constraint)})"
+                        f"UNIQUE ({', '.join(constraint)})"
                     )  # 复合唯一约束
                 else:
                     column_defs.append(f"UNIQUE ({constraint})")  # 单列唯一约束
