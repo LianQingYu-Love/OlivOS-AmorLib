@@ -60,12 +60,12 @@ class DataBase:
     def select(
         self,
         table: str,
-        rows: str | list | tuple | None = None,
+        rows: str | STRING_ROW | None = None,
         where: str | None = None,
         *where_params: Any,
         order: str | None = None,
-        limit: int | None = None, 
-        offset: int | None = None
+        limit: int | None = None,
+        offset: int | None = None,
     ) -> list[sqlite3.Row]:
         """查询数据
         Args:
@@ -117,6 +117,7 @@ class DataBase:
         data: dict[str, Any],
         where: str,
         *where_params: Any,
+        increment: STRING_ROW | None = None,
     ) -> int:
         """更新数据
         Args:
@@ -124,11 +125,19 @@ class DataBase:
             data (dict[str, Any]): 更新的数据字，键为列名，值为数据
             where (str): WHERE条件语句
             *where_params (Any): WHERE条件参数
+            increment (str | list | tuple | None, optional): 需要累加更新的列名 Defaults to None.
         Returns:
             int: 影响行数
         """
         assert self.cursor is not None
-        set_clause = ", ".join([f"{k} = ?" for k in data.keys()])
+        inc_cols = set(increment) if increment else set()
+        set_clause_parts = []
+        for col_name in data.keys():
+            if col_name in inc_cols:
+                set_clause_parts.append(f"{col_name} = {col_name} + ?")
+            else:
+                set_clause_parts.append(f"{col_name} = ?")
+        set_clause = ", ".join(set_clause_parts)
         sql = f"UPDATE {table} SET {set_clause} WHERE {where}"
         params = tuple(data.values()) + where_params
         try:
@@ -186,7 +195,7 @@ class DataBase:
     def create(
         self,
         table: str,
-        columns: dict[str, Union[Type[int], Type[float], Type[str], str]],
+        columns: dict[str, Union[Type[int], Type[float], Type[str], Type[dict], str]],
         primary_key: str | STRING_ROW | None = None,
         foreign_keys: dict[str, dict[str, str]] | None = None,
         unique_constraints: (
@@ -197,10 +206,11 @@ class DataBase:
         """创建表
         Args:
             table (str): 表名
-            columns (dict[str, Union[Type[int], Type[float], Type[str], str]]): 列定义，键为列名，值为数据类型或完整的列定义
+            columns (dict[str, Union[Type[int], Type[float], Type[str], Type[dict], str]]): 列定义，键为列名，值为数据类型或完整的列定义
                 - int: "INTEGER",
                 - float: "REAL",
                 - str: "TEXT",
+                - dict: "JSON",
                 - "NOW": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
                 - 直接使用SQL类型字符串
             primary_key (str | list[str] | tuple[str, ...] | None): 主键列名. Defaults to None.
@@ -215,13 +225,14 @@ class DataBase:
             int: "INTEGER",
             float: "REAL",
             str: "TEXT",
+            dict: "JSON",
             "NOW": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         }
         column_defs = []
         for column_name, column_type in columns.items():
-            if column_type not in (int, float, str) and type(column_type) != str:
+            if column_type not in type_mapping.keys() and type(column_type) != str:
                 raise RuntimeError(
-                    f"[CREATE]创建表失败: columns类型定义错误, 仅允许<class 'int'>、<class 'float'>、 <class 'str'>、 str类型| key: '{column_name}' is {column_type}"
+                    f"[CREATE]创建表失败: columns类型定义错误, 仅允许<class 'int'>、<class 'float'>、 <class 'str'>、 <class 'dict'>、 str类型| key: '{column_name}' is {column_type}"
                 ) from None
             if column_type in type_mapping:
                 # 使用映射的数据类型
