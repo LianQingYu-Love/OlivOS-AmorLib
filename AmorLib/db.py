@@ -279,7 +279,7 @@ class DataBase:
                     column_defs.append(f"UNIQUE ({constraint})")  # 单列唯一约束
         # endregion
         # 构建完整的CREATE TABLE语句
-        sql = f"CREATE TABLE IF NOT EXISTS {table} (\n    {',\n    '.join(column_defs)}\n)"
+        sql = f"CREATE TABLE IF NOT EXISTS {table} (\n    {', '.join(column_defs)}\n)"
         try:
             self.execute(sql)
         except RuntimeError as e:
@@ -373,6 +373,6 @@ class DataBase:
     # endregion
 
 
-def db_execute(db_path: str, sql: str, *params: Any) -> list[sqlite3.Row] | None:
+def execute(db_path: str, sql: str, *params: Any) -> list[sqlite3.Row] | None:
     with DataBase(db_path) as db:
         return db.execute(sql, *params)

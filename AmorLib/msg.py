@@ -7,6 +7,8 @@ from pydantic import BaseModel, ValidationError, Field, Tag
 # 文本
 class TextData(BaseModel):
     text: str
+
+
 class TextMsg(BaseModel):
     type: Literal["text"] = "text"
     data: TextData
@@ -15,9 +17,12 @@ class TextMsg(BaseModel):
     def create(text: str) -> dict:
         return {"type": "text", "data": {"text": text}}
 
+
 # 表情
 class FaceData(BaseModel):
     id: int
+
+
 class FaceMsg(BaseModel):
     type: Literal["face"] = "face"
     data: FaceData
@@ -26,10 +31,13 @@ class FaceMsg(BaseModel):
     def create(id: int) -> dict:
         return {"type": "face", "data": {"id": id}}
 
+
 # 图片
 class ImageData(BaseModel):
     file: str
     summary: str | None = None
+
+
 class ImageMsg(BaseModel):
     type: Literal["image"] = "image"
     data: ImageData
@@ -41,9 +49,12 @@ class ImageMsg(BaseModel):
             data["data"]["summary"] = summary
         return data
 
+
 # 回复
 class ReplyData(BaseModel):
     id: str
+
+
 class ReplyMsg(BaseModel):
     type: Literal["reply"] = "reply"
     data: ReplyData
@@ -52,9 +63,12 @@ class ReplyMsg(BaseModel):
     def create(id: str) -> dict:
         return {"type": "reply", "data": {"id": id}}
 
+
 # json
 class JsonData(BaseModel):
     data: str
+
+
 class JsonMsg(BaseModel):
     type: Literal["json"] = "json"
     data: JsonData
@@ -63,9 +77,12 @@ class JsonMsg(BaseModel):
     def create(data: str) -> dict:
         return {"type": "json", "data": {"data": data}}
 
+
 # 视频
 class VideoData(BaseModel):
     file: str
+
+
 class VideoMsg(BaseModel):
     type: Literal["video"] = "video"
     data: VideoData
@@ -74,10 +91,13 @@ class VideoMsg(BaseModel):
     def create(file: str) -> dict:
         return {"type": "video", "data": {"file": file}}
 
+
 # 文件
 class FileData(BaseModel):
     file: str
     name: str | None = None
+
+
 class FileMsg(BaseModel):
     type: Literal["file"] = "file"
     data: FileData
@@ -89,9 +109,12 @@ class FileMsg(BaseModel):
             data["data"]["name"] = name
         return data
 
+
 #  markdown
 class RecordData(BaseModel):
     content: str
+
+
 class RecordMsg(BaseModel):
     type: Literal["record"] = "record"
     data: RecordData
@@ -99,6 +122,7 @@ class RecordMsg(BaseModel):
     @staticmethod
     def create(content: str) -> dict:
         return {"type": "record", "data": {"content": content}}
+
 
 # 合并转发
 # region 合并消息支持的类型
@@ -116,9 +140,13 @@ MsgNodeUnion = Annotated[
     ],
     Field(discriminator="type"),
 ]
+
+
 # endregion
 class NewsItem(BaseModel):
     text: str
+
+
 class NodeData(BaseModel):
     user_id: Union[str, int]
     nickname: str
@@ -127,6 +155,8 @@ class NodeData(BaseModel):
     prompt: str | None = None
     summary: str | None = None
     source: str | None = None
+
+
 class NodeMsg(BaseModel):
     type: Literal["node"] = "node"
     data: NodeData
@@ -143,9 +173,12 @@ class NodeMsg(BaseModel):
         }
         return val_msg(data, type="node")
 
+
 # 艾特
 class AtData(BaseModel):
     qq: str
+
+
 class AtMsg(BaseModel):
     type: Literal["at"] = "at"
     data: AtData
@@ -159,6 +192,7 @@ class AtMsg(BaseModel):
             },
         }
         return val_msg(data, type="at")
+
 
 # endregion
 
@@ -246,8 +280,10 @@ def val_msgs(*messages: dict, type: msgType | None = None):
         except Exception as e:
             err_list.append(f"第{index+1}条消息验证错误：\n  {e}")
     if err_list:
+        error_content = "\n".join(err_list)
         raise ValueError(
-            f"共发现{len(err_list)}条消息验证错误：\n{"\n\n".join(err_list)}"
+            f"共发现{len(err_list)}条消息验证错误：\n{error_content}"
         ) from None
+
 
 # endregion
