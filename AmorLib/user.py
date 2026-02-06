@@ -5,7 +5,7 @@
 import OlivaDiceCore  # type: ignore
 
 
-def isInMasterList(plugin_event):  # type: ignore
+def is_master(plugin_event):  # type: ignore
     return OlivaDiceCore.ordinaryInviteManager.isInMasterList(
         plugin_event.bot_info.hash,
         OlivaDiceCore.userConfig.getUserHash(
@@ -14,7 +14,7 @@ def isInMasterList(plugin_event):  # type: ignore
     )
 
 
-def getGroupRole(plugin_event):
+def get_group_role(plugin_event):
     if hasattr(plugin_event.data, "group_id"):
         user_info = plugin_event.get_group_member_info(
             plugin_event.data.group_id, plugin_event.data.user_id
