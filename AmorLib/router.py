@@ -25,11 +25,11 @@ class UniqueRouter:
         self._forward = []
 
     def route(self, pattern: str):
-        def wrapper(handler):
+        def decorator(handler):
             self._forward.append((re.compile(pattern), handler))
             return handler
 
-        return wrapper
+        return decorator
 
     def search(self, msg: str):
         for pattern, handler in self._forward:
@@ -56,13 +56,13 @@ class FsmRouter:
         if any(state not in self._states.keys() for state in states):
             raise ValueError("状态路由器录入命令的状态非法。")
 
-        def wrapper(handler):
+        def decorator(handler):
             for state in states:
                 self._states[state].append(len(self._forward))
             self._forward.append((re.compile(pattern), handler))
             return handler
 
-        return wrapper
+        return decorator
 
     def search(self, states: str | STRING_ROW, msg: str):
         if type(states) == str:
@@ -88,12 +88,12 @@ class PriorityRouter:
         self._forward = []
 
     def route(self, priority: int, pattern: str):
-        def wrapper(handler):
+        def decorator(handler):
             self._forward.append((-priority, re.compile(pattern), handler))
             self._forward.sort()
             return handler
 
-        return wrapper
+        return decorator
 
     def search(self, msg: str):
         for _, pattern, handler in self._forward:
