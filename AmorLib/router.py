@@ -67,12 +67,12 @@ class FsmRouter:
     def search(self, states: str | STRING_ROW, msg: str):
         if type(states) == str:
             states = (states,)
-        cmd_unique_index = set()
+        unique_idx = set()
         for state in states:
             if state in self._states.keys():
-                cmd_unique_index.update(self._states[state])
-        for cmd_index in cmd_unique_index:
-            pattern, handler = self._forward[cmd_index]
+                unique_idx.update(self._states[state])
+        for idx in unique_idx:
+            pattern, handler = self._forward[idx]
             match = re.search(pattern, msg)
             if match:
                 return handler, match.groups()
