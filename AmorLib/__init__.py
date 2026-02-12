@@ -9,4 +9,4 @@ from .db import DataBase, execute
 from .router import UniqueRouter, FsmRouter, PriorityRouter
 
 from .user import is_master, get_group_role
-from .custom import init_msgCustom, has_NativeGUI
+from .msgCustom import init_msgCustom, has_NativeGUI
