@@ -15,9 +15,6 @@ def is_master(plugin_event):  # type: ignore
 
 
 def get_group_role(plugin_event):
-    if hasattr(plugin_event.data, "group_id"):
-        user_info = plugin_event.get_group_member_info(
-            plugin_event.data.group_id, plugin_event.data.user_id
-        )
-        return user_info["data"]["role"]
+    if "role" in plugin_event.data.sender:
+        return plugin_event.data.sender["role"]
     return
