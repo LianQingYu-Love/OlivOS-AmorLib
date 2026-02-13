@@ -10,3 +10,4 @@ from .router import UniqueRouter, FsmRouter, PriorityRouter
 
 from .user import is_master, get_group_role
 from .msgCustom import init_msgCustom, has_NativeGUI
+from .msgrReply import format_reply
