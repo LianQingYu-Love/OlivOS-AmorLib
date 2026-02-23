@@ -70,8 +70,9 @@ class MsgManager:
         # endregion 基本参数
         # region 初始化模板变量
         dictTValue = OlivaDiceCore.msgCustom.dictTValue.copy()
-        dictTValue["tUserName"] = self.sender["name"]
-        dictTValue["tName"] = self.sender["name"]
+        if "name" in plugin_event.data.sender:
+            dictTValue["tUserName"] = plugin_event.data.sender["name"]
+            dictTValue["tName"] = plugin_event.data.sender["name"]
         dictTValue.update(OlivaDiceCore.msgCustom.dictGValue)
         dictTValue = OlivaDiceCore.msgCustomManager.dictTValueInit(
             plugin_event, dictTValue
