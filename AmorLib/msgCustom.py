@@ -113,8 +113,8 @@ class MsgManager:
             ),
         )
         """判断消息类型（群/私聊）"""
-        msg_from = plugin_event.plugin_info["func_type"]
-        if msg_from == "group_message":
+        func_type = plugin_event.plugin_info["func_type"]
+        if func_type == "group_message":
             self.group_id = plugin_event.data.group_id
             self.flags["is_host"] = plugin_event.data.host_id is not None
             self.flags["is_group"] = True
@@ -127,7 +127,7 @@ class MsgManager:
                 elif role == "sub_admin":
                     self.flags["is_group_admin"] = True
                     self.flags["is_group_sub_admin"] = True
-        elif msg_from == "private_message":
+        elif func_type == "private_message":
             self.flags["is_group"] = False
         # endregion 初始化用户身份相关标识
         # region 检查权限配置
