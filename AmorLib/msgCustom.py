@@ -1,8 +1,8 @@
-import OlivOS  # type: ignore
-import OlivaDiceCore  # type: ignore
+import OlivOS
+import OlivaDiceCore
 
 try:
-    import OlivaDiceNativeGUI  # type: ignore
+    import OlivaDiceNativeGUI
 
     has_NativeGUI = True
 except ImportError:
@@ -15,10 +15,10 @@ def init_msgCustom(Plugin, Proc):
         # 回复词
         if bot_id not in OlivaDiceCore.msgCustom.dictStrCustomDict:
             OlivaDiceCore.msgCustom.dictStrCustomDict[bot_id] = {}
-        for key in Plugin.msgCustom.dictStrCustomDict:
+        for key in Plugin.msgCustom.dictStrCustom:
             if key not in OlivaDiceCore.msgCustom.dictStrCustomDict[bot_id]:
                 OlivaDiceCore.msgCustom.dictStrCustomDict[bot_id][key] = (
-                    Plugin.msgCustom.dictStrCustomDict[key]
+                    Plugin.msgCustom.dictStrCustom[key]
                 )
         # 帮助文档
         for key in Plugin.msgCustom.dictHelpDoc:
