@@ -32,6 +32,13 @@ def init_msgCustom(Plugin, Proc):
                 OlivaDiceCore.console.dictConsoleSwitch[bot_id][key] = (
                     Plugin.msgCustom.dictConsoleSwitch[key]
                 )
+    # 全局配置项
+    for key in Plugin.msgCustom.dictConsoleSwitch:
+        if key not in OlivaDiceCore.console.dictConsoleSwitch["unity"]:
+            OlivaDiceCore.console.dictConsoleSwitch["unity"][key] = (
+                Plugin.msgCustom.dictConsoleSwitch[key]
+            )
+
     if has_NativeGUI:
         # 回复词说明
         for key in Plugin.msgCustom.dictStrCustomNote:
