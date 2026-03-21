@@ -1,5 +1,5 @@
 __author__ = "星瑚"
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 STRING_ROW = list[str] | tuple[str, ...]
 

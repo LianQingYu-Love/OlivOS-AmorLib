@@ -15,43 +15,32 @@ def init_msgCustom(Plugin, Proc):
         # 回复词
         if bot_id not in OlivaDiceCore.msgCustom.dictStrCustomDict:
             OlivaDiceCore.msgCustom.dictStrCustomDict[bot_id] = {}
-        for key in Plugin.msgCustom.dictStrCustom:
+        for key, value in Plugin.msgCustom.dictStrCustom.items():
             if key not in OlivaDiceCore.msgCustom.dictStrCustomDict[bot_id]:
-                OlivaDiceCore.msgCustom.dictStrCustomDict[bot_id][key] = (
-                    Plugin.msgCustom.dictStrCustom[key]
-                )
+                OlivaDiceCore.msgCustom.dictStrCustomDict[bot_id][key] = value
         # 帮助文档
-        for key in Plugin.msgCustom.dictHelpDoc:
+        for key, value in Plugin.msgCustom.dictHelpDoc.items():
             if key not in OlivaDiceCore.helpDocData.dictHelpDoc[bot_id]:
-                OlivaDiceCore.helpDocData.dictHelpDoc[bot_id][key] = (
-                    Plugin.msgCustom.dictHelpDoc[key]
-                )
+                OlivaDiceCore.helpDocData.dictHelpDoc[bot_id][key] = value
         # 配置项
-        for key in Plugin.msgCustom.dictConsoleSwitch:
+        for key, value in Plugin.msgCustom.dictConsoleSwitch.items():
             if key not in OlivaDiceCore.console.dictConsoleSwitch[bot_id]:
-                OlivaDiceCore.console.dictConsoleSwitch[bot_id][key] = (
-                    Plugin.msgCustom.dictConsoleSwitch[key]
-                )
-    # 全局配置项
-    for key in Plugin.msgCustom.dictConsoleSwitch:
+                OlivaDiceCore.console.dictConsoleSwitch[bot_id][key] = value
+    # 全局配置项和默认配置项
+    for key, value in Plugin.msgCustom.dictConsoleSwitch.items():
         if key not in OlivaDiceCore.console.dictConsoleSwitch["unity"]:
-            OlivaDiceCore.console.dictConsoleSwitch["unity"][key] = (
-                Plugin.msgCustom.dictConsoleSwitch[key]
-            )
-
+            OlivaDiceCore.console.dictConsoleSwitch["unity"][key] = value
+        if key not in OlivaDiceCore.console.dictConsoleSwitchTemplate["default"]:
+            OlivaDiceCore.console.dictConsoleSwitchTemplate["default"][key] = value
     if has_NativeGUI:
         # 回复词说明
-        for key in Plugin.msgCustom.dictStrCustomNote:
+        for key, value in Plugin.msgCustom.dictStrCustomNote.items():
             if key not in OlivaDiceNativeGUI.msgCustom.dictStrCustomNote:
-                OlivaDiceNativeGUI.msgCustom.dictStrCustomNote[key] = (
-                    Plugin.msgCustom.dictStrCustomNote[key]
-                )
+                OlivaDiceNativeGUI.msgCustom.dictStrCustomNote[key] = value
         # 配置项说明
-        for key in Plugin.msgCustom.dictConsoleSwitchNote:
+        for key, value in Plugin.msgCustom.dictConsoleSwitchNote.items():
             if key not in OlivaDiceNativeGUI.msgCustom.dictConsoleSwitchNote:
-                OlivaDiceNativeGUI.msgCustom.dictConsoleSwitchNote[key] = (
-                    Plugin.msgCustom.dictConsoleSwitchNote[key]
-                )
+                OlivaDiceNativeGUI.msgCustom.dictConsoleSwitchNote[key] = value
     OlivaDiceCore.msgCustom.dictStrConst.update(Plugin.msgCustom.dictStrConst)
     OlivaDiceCore.msgCustom.dictGValue.update(Plugin.msgCustom.dictGValue)
     OlivaDiceCore.msgCustom.dictTValue.update(Plugin.msgCustom.dictTValue)
@@ -213,12 +202,18 @@ class MsgManager:
 
     # endregion
 
-    def msg_format(self, custom: str, t_value: dict[str, str] = {}):
+    def msg_format(
+        self,
+        custom: str,
+        t_value: dict[str, str] = {},
+        flagCross: bool = True,
+        flagSplit: bool = False,
+    ):
         """格式化"""
         if custom in self.dictStrCustomDict:
             dictTValue = self.dictTValue
             dictTValue.update(t_value)
             return OlivaDiceCore.msgCustomManager.formatReplySTR(
-                self.dictStrCustomDict[custom], dictTValue
+                self.dictStrCustomDict[custom], dictTValue, flagCross, flagSplit
             )
         return
