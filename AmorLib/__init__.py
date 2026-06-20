@@ -1,5 +1,12 @@
-__author__ = "星瑚"
-__version__ = "1.3"
+# -*- encoding: utf-8 -*-
+"""
+@File      :    AmorLib/__init__.py
+@Author    :    LianQingYu-Love恋倾雨
+@Contact   :    None
+@License   :    AGPLv3
+@Copyright :    (C) 2026 AmorLib
+@Desc      :    None
+"""
 
 STRING_ROW = list[str] | tuple[str, ...]
 

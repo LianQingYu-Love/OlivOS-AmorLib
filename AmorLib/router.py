@@ -1,15 +1,20 @@
-""">>>
-命令路由器
-通过路由装饰器实现命令识别与执行。
-独立路由
-    依次匹配直到匹配成功
-    适合强独立性命令集
-状态机路由
-    依次匹配对应状态的命令
-    适合不同状态或身份则不同触发的命令集
-优先级路由
-    按优先级依次匹配
-    适合命令相同但有优先级的命令
+# -*- encoding: utf-8 -*-
+"""
+@File      :    AmorLib/router.py
+@Author    :    LianQingYu-Love恋倾雨
+@Contact   :    xinghu2408@foxmail.com
+@License   :    AGPLv3
+@Copyright :    (C) 2026 AmorLib
+@Desc      :    命令路由器: 通过路由装饰器实现命令识别与执行。
+                独立路由
+                    依次匹配直到匹配成功
+                    适合强独立性命令集
+                状态机路由
+                    依次匹配对应状态的命令
+                    适合不同状态或身份则不同触发的命令集
+                优先级路由
+                    按优先级依次匹配
+                    适合命令相同但有优先级的命令集
 """
 
 import re
@@ -87,12 +92,10 @@ class FsmRouter:
         msg: str,
         search_mode: SearchMode = SearchMode.ANY,
     ):
-        if type(states) == str:
-            states = (states,)
-        states = set(states)
+        state_row = set((states,) if type(states) == str else states)
         forward = []
         target_rules = set()
-        for state in states:
+        for state in state_row:
             if state in self._states:
                 target_rules.update(self._states[state])
         for rule_id in target_rules:
@@ -100,13 +103,13 @@ class FsmRouter:
             match_state = False
             if search_mode == SearchMode.ANY:
                 # 任一状态匹配：规则状态与当前状态有交集
-                match_state = bool(rule["states"] & states)
+                match_state = bool(rule["states"] & state_row)
             elif search_mode == SearchMode.EXACT:
                 # 完全匹配：规则状态与当前状态完全一致
-                match_state = rule["states"] == states
+                match_state = rule["states"] == state_row
             elif search_mode == SearchMode.ALL:
                 # 全部匹配：规则包含所有当前状态
-                match_state = states.issubset(rule["states"])
+                match_state = state_row.issubset(rule["states"])
             if match_state:
                 result = re.search(rule["pattern"], msg)
                 if result:

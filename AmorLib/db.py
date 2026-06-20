@@ -1,8 +1,11 @@
-""">>>
-sqlite3 数据库操作工具包
-该模块提供了一些简易使用 SQLite 数据库的方法。
->>> with DataBase(db_path) as db:
->>>     db.execute(sql, *params)
+# -*- encoding: utf-8 -*-
+"""
+@File      :    AmorLib/db.py
+@Author    :    LianQingYu-Love恋倾雨
+@Contact   :    xinghu2408@foxmail.com
+@License   :    AGPLv3
+@Copyright :    (C) 2026 AmorLib
+@Desc      :    sqlite3 数据库操作工具包，该模块提供了一些简易使用 SQLite 数据库的方法。
 """
 
 import sqlite3
