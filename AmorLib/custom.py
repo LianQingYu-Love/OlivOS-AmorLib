@@ -1,8 +1,8 @@
-import OlivOS
-import OlivaDiceCore
+import OlivOS  # type: ignore
+import OlivaDiceCore  # type: ignore
 
 try:
-    import OlivaDiceNativeGUI
+    import OlivaDiceNativeGUI  # type: ignore
 
     has_NativeGUI = True
 except ImportError:
